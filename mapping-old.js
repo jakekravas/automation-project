@@ -1,9 +1,6 @@
 const { Client } = require('pg');
 const xlsx = require('node-xlsx');
-const PDFParser = require('pdf2json');
 require('dotenv').config();
-
-let pdfParser = new PDFParser;
 
 const pg = new Client({
   user: process.env.PG_USER,
@@ -23,150 +20,54 @@ try {
 
 const pdfMap = async (sender, text) => {
 
-  pdfParser.on("pdfParser_dataError", errData => console.error(errData.parserError) );
-
-  const insertRecord = async (columns, values) => {
-    console.log(`
-      INSERT INTO orders.orders (
-        ${columns}
-      )
-      VALUES (
-        ${values}
-      )
-    `);
-    await pg.query(`
-      INSERT INTO orders.orders (
-        ${columns}
-      )
-      VALUES (
-        ${values}
-      )
-    `)
-    console.log('inserted order');
-  }
-
   try {
-
-    const parsePdf = async (pdfData) => {
-      const res = pdfData.formImage;
-      const pageOne = res.Pages[0].Texts;
-      const pageTwo = res.Pages[1].Texts;
-      // console.log(pageTwo[80].R[0].T.split('%20').join(' '))
+    if (text.includes('Ciner')) {
+      console.log('USE CINER');
+      const textArr = text.split(/\r?\n/);
+      // console.log(textArr);
+      // console.dir(textArr, {'maxArrayLength': null});
+  
+      const shipperName = textArr[2]
+      const shipperAddressLine1 = textArr[3]
+      const shipperAddressLine2 = textArr[4]
+      const shipperAddressLine3 = textArr[5]
+      const shipperAddress = `${shipperAddressLine1}, ${shipperAddressLine2}, ${shipperAddressLine3}`;
     
-      let shipperName
-      let shipperAddressLine1
-      let shipperAddressLine2
-      let shipperAddressLine3
-      let shipperAddressLine4
+      // Consignee is ship to
+      const consigneeName = textArr[113]
+      const consigneeAddressLine1 = textArr[114]
+      const consigneeAddressLine2 = textArr[115]
+      const consigneeAddressLine3 = textArr[116]
+      const consigneeAddress = `${consigneeAddressLine1}, ${consigneeAddressLine2}, ${consigneeAddressLine3}`
+  
+      const billToName = textArr[112]
+      const billToAddressLine1 = textArr[107]
+      const billToAddressLine2 = textArr[108]
+      const billToAddressLine3 = textArr[109]
+      const billToAddress = `${billToAddressLine1}, ${billToAddressLine2}, ${billToAddressLine3}`
     
-      let billToName
-      let billToAddressLine1
-      let billToAddressLine2
-      let billToAddressLine3
-      let billToAddressLine4
-    
-      let consigneeName
-      let consigneeAddressLine1
-      let consigneeAddressLine2
-      let consigneeAddressLine3
-      let consigneeAddressLine4
-    
-      let commodity;
-      let consigneeRefNum;
-      let bol;
-      let scheduledArrivalConsignee; //same as requested delivery date
-    
-    
-      // %20 = space
-      // %2C = ,
-      // %2F = /
-    
-      // First page of PDF
-      for (let i = 0; i < pageOne.length; i++) {
-        let x = pageOne[i].x
-        let y = pageOne[i].y
-    
-        // SHIPPER
-        if (x === 1.748 && y === 3.458) {
-          shipperName = pageOne[i].R[0].T.split('%20').join(' ').split('%2C').join(',')
-        }
-        if (x === 1.748 && y === 4.146) {
-          shipperAddressLine1 = pageOne[i].R[0].T.split('%20').join(' ').split('%2C').join(',')
-        }
-        if (x === 1.748 && y === 4.833) {
-          shipperAddressLine2 = pageOne[i].R[0].T.split('%20').join(' ').split('%2C').join(',')
-        }
-        if (x === 1.748 && y === 5.521) {
-          shipperAddressLine3 = pageOne[i].R[0].T.split('%20').join(' ').split('%2C').join(',')
-        }
-        if (x === 1.748 && y === 6.208) {
-          shipperAddressLine4 = pageOne[i].R[0].T.split('%20').join(' ').split('%2C').join(',')
-        }
-    
-        // CONSIGNEE
-        if (x === 1.077 && y === 13.14) {
-          consigneeName = pageOne[i].R[0].T.split('%20').join(' ').split('%2C').join(',')
-        }
-        if (x === 1.077 && y === 14.353) {
-          consigneeAddressLine1 = pageOne[i].R[0].T.split('%20').join(' ').split('%2C').join(',')
-        }
-        if (x === 1.077 && y === 15.228) {
-          consigneeAddressLine2 = pageOne[i].R[0].T.split('%20').join(' ').split('%2C').join(',').split('%2F').join('/')
-        }
-        if (x === 1.077 && y === 16.103) {
-          consigneeAddressLine3 = pageOne[i].R[0].T.split('%20').join(' ').split('%2C').join(',')
-        }
-        if (x === 1.077 && y === 16.978) {
-          consigneeAddressLine4 = pageOne[i].R[0].T.split('%20').join(' ').split('%2C').join(',')
-        }
-    
-        // MISC
-        if (x === 5.563 && y === 32.438) {
-          commodity = pageOne[i].R[0].T.split('%20').join(' ').split('%2C').join(',')
-        }
-        if (x === 29.249 && y === 15.681999999999999) {
-          consigneeRefNum = pageOne[i].R[0].T.split('%20').join(' ').split('%2C').join(',').split('%2F').join('/')
-        }
-      }
-    
-      // Second page of PDF
-      for (let i = 0; i < pageTwo.length; i++) {
-        let x = pageTwo[i].x
-        let y = pageTwo[i].y
-    
-        // BILL TO
-        if (x === 21.845 && y === 13.769) {
-          billToName = pageTwo[i].R[0].T.split('%20').join(' ').split('%2C').join(',')
-        }
-        if (x === 21.845 && y === 14.779) {
-          billToAddressLine1 = pageTwo[i].R[0].T.split('%20').join(' ').split('%2C').join(',')
-        }
-        if (x === 21.845 && y === 15.404) {
-          billToAddressLine2 = pageTwo[i].R[0].T.split('%20').join(' ').split('%2C').join(',').split('%2F').join('/')
-        }
-        if (x === 21.845 && y === 16.029) {
-          billToAddressLine3 = pageTwo[i].R[0].T.split('%20').join(' ').split('%2C').join(',')
-        }
-        if (x === 21.845 && y === 16.654) {
-          billToAddressLine4 = pageTwo[i].R[0].T.split('%20').join(' ').split('%2C').join(',')
-        }
-    
-        // MISC
-        if (x === 28.685 && y === 18.452) {
-          bol = pageTwo[i].R[0].T.split('%20').join(' ').split('%2C').join(',')
-        }
-        if (x === 10.235 && y === 20.278) {
-          scheduledArrivalConsignee = pageTwo[i].R[0].T.split('%20').join(' ').split('%2C').join(',').split('%2F').join('/')
-        }
-      }
-      
-      const shipperAddress = `${shipperAddressLine1}, ${shipperAddressLine2}, ${shipperAddressLine3}, ${shipperAddressLine4}`;
-      const consigneeAddress = `${consigneeAddressLine1}, ${consigneeAddressLine2}, ${consigneeAddressLine3}, ${consigneeAddressLine4}`
-      const billToAddress = `${billToAddressLine1}, ${billToAddressLine2}, ${billToAddressLine3}, ${billToAddressLine4}`
+      const consigneeRefNum = textArr[textArr.indexOf('Cust Po #:') + 1];
+      const bol = textArr[textArr.indexOf('Order #:') + 1];
+      const scheduledArrivalConsignee = textArr[69];
+      let isDuplicate;
+  
+      let commodityConf = textArr[textArr.indexOf('Carrier:')-2].split(' ')[0].split('')
+      let indexOfCommStart;
       const currentDate = new Date().toISOString();
+  
+      for (let i = 0; i < commodityConf.length; i++) {
+        if (commodityConf[i] === commodityConf[i].toUpperCase()) {
+          indexOfCommStart = commodityConf.indexOf(commodityConf[i]);
+        }
+      }
+  
+      let x = commodityConf.join('')
+      let commodity = textArr[textArr.indexOf('Carrier:')-2].split(' ');
+      // Slicing first word of commodity so it doesn't contain extra first part
+      commodity[0] = x.slice(indexOfCommStart, commodityConf.length);
+      commodity = commodity.join(' ');
 
-      let columns = `
-        shipper_name,
+      let columns = `shipper_name,
         shipper_address,
         consignee_name,
         consignee_address,
@@ -180,142 +81,6 @@ const pdfMap = async (sender, text) => {
         is_duplicate,
         date_inserted
       `;
-
-      const duplicateRes = await pg.query(`
-        SELECT * FROM orders.orders
-        WHERE bol ='${bol}'
-      `)
-
-      let mostRecentDuplicate;
-      let changedColumns = '';
-
-      // Check for duplicate bol #
-      if (duplicateRes.rows.length === 0) {
-        isDuplicate = false
-      } else if (duplicateRes.rows.length > 0) {
-        isDuplicate = true
-        mostRecentDuplicate = duplicateRes.rows[duplicateRes.rows.length-1]
-      }
-
-      let values = `
-        '${shipperName}',
-        '${shipperAddress}',
-        '${consigneeName}',
-        '${consigneeAddress}',
-        '${scheduledArrivalConsignee}',
-        '${consigneeRefNum}',
-        '${bol}',
-        '${commodity}',
-        '${billToName}',
-        '${billToAddress}',
-        '${sender}',
-        '${isDuplicate}',
-        '${currentDate}'
-      `;
-
-      // Check which columns have changed
-      if (mostRecentDuplicate) {
-        if (mostRecentDuplicate.shipper_name !== shipperName) changedColumns += 'shipper_name, '
-        if (mostRecentDuplicate.shipper_address !== shipperAddress) changedColumns += 'shipper_address, '
-        if (mostRecentDuplicate.consignee_name !== consigneeName) changedColumns += 'consignee_name, '
-        if (mostRecentDuplicate.consignee_address !== consigneeAddress) changedColumns += 'consignee_address, '
-        if (mostRecentDuplicate.scheduled_arrival_consignee !== scheduledArrivalConsignee) changedColumns += 'scheduled_arrival_consignee, '
-        if (mostRecentDuplicate.consignee_reference !== consigneeRefNum) changedColumns += 'consignee_reference, '
-        if (mostRecentDuplicate.bol !== bol) changedColumns += 'bol, '
-        if (mostRecentDuplicate.commodity !== commodity) changedColumns += 'commodity, '
-        if (mostRecentDuplicate.bill_to_name !== billToName) changedColumns += 'bill_to_name, '
-        if (mostRecentDuplicate.bill_to_address !== billToAddress) changedColumns += 'bill_to_address, '
-      }
-
-      // Add changed columns to insert query
-      if (changedColumns !== '') {
-        changedColumns = changedColumns.slice(0,-2);
-        values += `, '${changedColumns}'`
-        columns += `, columns_changed`
-      }
-
-      insertRecord(columns, values)
-    }
-
-    if (text.includes('Ciner')) {
-
-      onError = (err) => console.log(err);
-
-      pdfParser.on("pdfParser_dataReady", pdfData => {
-        parsePdf(pdfData)
-      });
-
-      function readFile(filename, onError) {
-        pdfParser.loadPDF(filename)
-      }
-      
-      readFile('order.pdf', onError );
-
-
-      // OLD ONE
-      // OLD ONE
-      // OLD ONE
-      // OLD ONE
-      // console.log('USE CINER');
-      // const textArr = text.split(/\r?\n/);
-      // console.dir(textArr, {'maxArrayLength': null});
-      // // console.log(textArr);
-      // // console.dir(textArr, {'maxArrayLength': null});
-  
-      // const shipperName = textArr[2]
-      // const shipperAddressLine1 = textArr[3]
-      // const shipperAddressLine2 = textArr[4]
-      // const shipperAddressLine3 = textArr[5]
-      // const shipperAddress = `${shipperAddressLine1}, ${shipperAddressLine2}, ${shipperAddressLine3}`;
-    
-      // // Consignee is ship to
-      // const consigneeName = textArr[113]
-      // const consigneeAddressLine1 = textArr[114]
-      // const consigneeAddressLine2 = textArr[115]
-      // const consigneeAddressLine3 = textArr[116]
-      // const consigneeAddress = `${consigneeAddressLine1}, ${consigneeAddressLine2}, ${consigneeAddressLine3}`
-  
-      // const billToName = textArr[112]
-      // const billToAddressLine1 = textArr[107]
-      // const billToAddressLine2 = textArr[108]
-      // const billToAddressLine3 = textArr[109]
-      // const billToAddress = `${billToAddressLine1}, ${billToAddressLine2}, ${billToAddressLine3}`
-    
-      // const consigneeRefNum = textArr[textArr.indexOf('Cust Po #:') + 1];
-      // const bol = textArr[textArr.indexOf('Order #:') + 1];
-      // const scheduledArrivalConsignee = textArr[69];
-      // let isDuplicate;
-  
-      // let commodityConf = textArr[textArr.indexOf('Carrier:')-2].split(' ')[0].split('')
-      // let indexOfCommStart;
-      // const currentDate = new Date().toISOString();
-  
-      // for (let i = 0; i < commodityConf.length; i++) {
-      //   if (commodityConf[i] === commodityConf[i].toUpperCase()) {
-      //     indexOfCommStart = commodityConf.indexOf(commodityConf[i]);
-      //   }
-      // }
-  
-      // let x = commodityConf.join('')
-      // let commodity = textArr[textArr.indexOf('Carrier:')-2].split(' ');
-      // // Slicing first word of commodity so it doesn't contain extra first part
-      // commodity[0] = x.slice(indexOfCommStart, commodityConf.length);
-      // commodity = commodity.join(' ');
-
-      // let columns = `shipper_name,
-      //   shipper_address,
-      //   consignee_name,
-      //   consignee_address,
-      //   scheduled_arrival_consignee,
-      //   consignee_reference,
-      //   bol,
-      //   commodity,
-      //   bill_to_name,
-      //   bill_to_address,
-      //   email,
-      //   is_duplicate,
-      //   date_inserted
-      // `;
     
       // console.log('SHIPPER')
       // console.log(shipperName)
@@ -342,74 +107,74 @@ const pdfMap = async (sender, text) => {
       // console.log(consigneeRefNum)
       // console.log(bol)
           
-    //   const duplicateRes = await pg.query(`
-    //     SELECT * FROM orders.orders
-    //     WHERE bol ='${bol}'
-    //   `)
+      const duplicateRes = await pg.query(`
+        SELECT * FROM orders.orders
+        WHERE bol ='${bol}'
+      `)
 
-    //   let mostRecentDuplicate;
-    //   let changedColumns = '';
+      let mostRecentDuplicate;
+      let changedColumns = '';
 
-    //   if (duplicateRes.rows.length === 0) {
-    //     isDuplicate = false
-    //   } else if (duplicateRes.rows.length > 0) {
-    //     isDuplicate = true
-    //     mostRecentDuplicate = duplicateRes.rows[duplicateRes.rows.length-1]
-    //   }
+      if (duplicateRes.rows.length === 0) {
+        isDuplicate = false
+      } else if (duplicateRes.rows.length > 0) {
+        isDuplicate = true
+        mostRecentDuplicate = duplicateRes.rows[duplicateRes.rows.length-1]
+      }
 
-    //   let values = `
-    //     '${shipperName}',
-    //     '${shipperAddress}',
-    //     '${consigneeName}',
-    //     '${consigneeAddress}',
-    //     '${scheduledArrivalConsignee}',
-    //     '${consigneeRefNum}',
-    //     '${bol}',
-    //     '${commodity}',
-    //     '${billToName}',
-    //     '${billToAddress}',
-    //     '${sender}',
-    //     '${isDuplicate}',
-    //     '${currentDate}'
-    //   `;
+      let values = `
+        '${shipperName}',
+        '${shipperAddress}',
+        '${consigneeName}',
+        '${consigneeAddress}',
+        '${scheduledArrivalConsignee}',
+        '${consigneeRefNum}',
+        '${bol}',
+        '${commodity}',
+        '${billToName}',
+        '${billToAddress}',
+        '${sender}',
+        '${isDuplicate}',
+        '${currentDate}'
+      `;
 
-    // //   // Checking which columns have changed
-    //   if (mostRecentDuplicate) {
-    //     if (mostRecentDuplicate.shipper_name !== shipperName) changedColumns += 'shipper_name, '
-    //     if (mostRecentDuplicate.shipper_address !== shipperAddress) changedColumns += 'shipper_address, '
-    //     if (mostRecentDuplicate.consignee_name !== consigneeName) changedColumns += 'consignee_name, '
-    //     if (mostRecentDuplicate.consignee_address !== consigneeAddress) changedColumns += 'consignee_address, '
-    //     if (mostRecentDuplicate.scheduled_arrival_consignee !== scheduledArrivalConsignee) changedColumns += 'scheduled_arrival_consignee, '
-    //     if (mostRecentDuplicate.consignee_reference !== consigneeRefNum) changedColumns += 'consignee_reference, '
-    //     if (mostRecentDuplicate.bol !== bol) changedColumns += 'bol, '
-    //     if (mostRecentDuplicate.commodity !== commodity) changedColumns += 'commodity, '
-    //     if (mostRecentDuplicate.bill_to_name !== billToName) changedColumns += 'bill_to_name, '
-    //     if (mostRecentDuplicate.bill_to_address !== billToAddress) changedColumns += 'bill_to_address, '
-    //   }
+      // Checking which columns have changed
+      if (mostRecentDuplicate) {
+        if (mostRecentDuplicate.shipper_name !== shipperName) changedColumns += 'shipper_name, '
+        if (mostRecentDuplicate.shipper_address !== shipperAddress) changedColumns += 'shipper_address, '
+        if (mostRecentDuplicate.consignee_name !== consigneeName) changedColumns += 'consignee_name, '
+        if (mostRecentDuplicate.consignee_address !== consigneeAddress) changedColumns += 'consignee_address, '
+        if (mostRecentDuplicate.scheduled_arrival_consignee !== scheduledArrivalConsignee) changedColumns += 'scheduled_arrival_consignee, '
+        if (mostRecentDuplicate.consignee_reference !== consigneeRefNum) changedColumns += 'consignee_reference, '
+        if (mostRecentDuplicate.bol !== bol) changedColumns += 'bol, '
+        if (mostRecentDuplicate.commodity !== commodity) changedColumns += 'commodity, '
+        if (mostRecentDuplicate.bill_to_name !== billToName) changedColumns += 'bill_to_name, '
+        if (mostRecentDuplicate.bill_to_address !== billToAddress) changedColumns += 'bill_to_address, '
+      }
 
-    //   if (changedColumns !== '') {
-    //     changedColumns = changedColumns.slice(0,-2);
-    //     values += `, '${changedColumns}'`
-    //     columns += `, columns_changed`
-    //   }
+      if (changedColumns !== '') {
+        changedColumns = changedColumns.slice(0,-2);
+        values += `, '${changedColumns}'`
+        columns += `, columns_changed`
+      }
 
-    //   console.log(`
-    //   INSERT INTO orders.orders (
-    //     ${columns}
-    //   )
-    //   VALUES (
-    //     ${values}
-    //   )
-    // `);
+      console.log(`
+      INSERT INTO orders.orders (
+        ${columns}
+      )
+      VALUES (
+        ${values}
+      )
+    `);
 
-    //   await pg.query(`
-    //     INSERT INTO orders.orders (
-    //       ${columns}
-    //     )
-    //     VALUES (
-    //       ${values}
-    //     )
-    //   `)
+      await pg.query(`
+        INSERT INTO orders.orders (
+          ${columns}
+        )
+        VALUES (
+          ${values}
+        )
+      `)
 
     } else if (text.includes('Genesis')) {
       console.log('USE GENESIS');
@@ -446,19 +211,19 @@ const pdfMap = async (sender, text) => {
       let isDuplicate;
       const currentDate = new Date().toISOString();
     
-      console.log('Consignee:')
-      console.log(consigneeName)
-      console.log(consigneeAddressLine1)
-      console.log(consigneeAddressLine2)
-      console.log(consigneeAddressLine3)
-      console.log('\n')
-      console.log('Shipper:')
-      console.log(shipperName)
-      console.log(shipperAddress1)
-      console.log(shipperAddress2)
-      console.log('Product: ' + product)
-      console.log('Order number: ' + orderNumber)
-      console.log('BOL: ' + bol);
+      // console.log('Consignee:')
+      // console.log(consigneeName)
+      // console.log(consigneeAddressLine1)
+      // console.log(consigneeAddressLine2)
+      // console.log(consigneeAddressLine3)
+      // console.log('\n')
+      // console.log('Shipper:')
+      // console.log(shipperName)
+      // console.log(shipperAddress1)
+      // console.log(shipperAddress2)
+      // console.log('Product: ' + product)
+      // console.log('Order number: ' + orderNumber)
+      // console.log('BOL: ' + bol);
 
       const duplicateRes = await pg.query(`
         SELECT * FROM orders.orders

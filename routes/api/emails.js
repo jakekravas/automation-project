@@ -2,7 +2,7 @@ const express = require('express');
 const pdf = require('pdf-parse');
 const fs = require('fs');
 const { htmlToText } = require('html-to-text');
-const { pdfMap, thermoFisherMap, excelMap } = require('../../mapping-.js');
+const { pdfMap, thermoFisherMap, excelMap } = require('../../mapping.js');
 require('dotenv').config();
 const { Client } = require('pg');
 
@@ -41,7 +41,7 @@ router.post('/', async (req, res) => {
       console.log('USE THERMOFISHER');
       thermoFisherMap(emailBody);
     }
-    console.log(req.body.attachments[0].contentType);
+    // console.log(req.body.attachments[0].contentType);
 
     for (let i = 0; i < attachments.length; i++) {
       if (attachments[i].contentType === 'application/pdf') {
